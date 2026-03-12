@@ -280,7 +280,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 } else {
                     pingMs = -1L
                 }
-                delay(10000)
+                delay(5000)
             }
         }
     }
@@ -300,4 +300,3 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         super.onCleared()
         stopPingLoop()
     }
-}
