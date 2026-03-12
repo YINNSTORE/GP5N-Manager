@@ -376,13 +376,13 @@ private fun SettingsScreen(viewModel: MainViewModel) {
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         FilterChip(
                             selected = viewModel.isDarkMode,
-                            onClick = { viewModel.setDarkMode(true) },
+                            onClick = { viewModel.updateDarkMode(true) },
                             label = { Text("Dark") },
                             leadingIcon = { Icon(Icons.Rounded.DarkMode, null) },
                         )
                         FilterChip(
                             selected = !viewModel.isDarkMode,
-                            onClick = { viewModel.setDarkMode(false) },
+                            onClick = { viewModel.updateDarkMode(false) },
                             label = { Text("Light") },
                             leadingIcon = { Icon(Icons.Rounded.LightMode, null) },
                         )
