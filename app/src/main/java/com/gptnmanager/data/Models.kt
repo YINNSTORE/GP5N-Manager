@@ -1,5 +1,12 @@
 package com.gptnmanager.data
 
+enum class MessageType {
+    SUCCESS,
+    ERROR,
+    INFO,
+    WARNING
+}
+
 data class ServerConfig(
     val id: String,
     val name: String,
@@ -29,4 +36,5 @@ data class UserItem(
 data class AppMessage(
     val text: String,
     val isError: Boolean = false,
+    val type: MessageType = if (isError) MessageType.ERROR else MessageType.SUCCESS,
 )
