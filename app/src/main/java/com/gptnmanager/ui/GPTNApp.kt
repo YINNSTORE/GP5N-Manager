@@ -27,6 +27,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.ExperimentalMaterialApi
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.CheckCircle
@@ -71,23 +72,21 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.Offset
 import androidx.compose.ui.unit.dp
 import com.gptnmanager.MainViewModel
 import com.gptnmanager.data.AppMessage
@@ -253,7 +252,7 @@ private fun FancyToast(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterialApi::class)
 @Composable
 private fun DashboardScreen(viewModel: MainViewModel) {
     var showServerSheet by remember { mutableStateOf(false) }
@@ -426,6 +425,7 @@ private fun DashboardScreen(viewModel: MainViewModel) {
     }
 }
 
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 private fun UsersScreen(viewModel: MainViewModel) {
     var query by rememberSaveable { mutableStateOf("") }
@@ -772,7 +772,7 @@ private fun PingStatusCard(modifier: Modifier, pingMs: Long) {
                 style = TextStyle(
                     shadow = Shadow(
                         color = pingColor.copy(alpha = 0.95f),
-                        offset = Offset(0f, 0f),
+                        offset = Offset.Zero,
                         blurRadius = 16f
                     )
                 )
