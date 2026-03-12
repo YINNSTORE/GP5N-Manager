@@ -1,6 +1,5 @@
 package com.gptnmanager.ui
 
-import androidx.compose.material.icons.rounded.Close
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -11,8 +10,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -35,7 +34,6 @@ import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Dns
-import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Error
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Info
@@ -43,7 +41,11 @@ import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.People
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.Warning
+import androidx.compose.material.pullrefresh.PullRefreshIndicator
+import androidx.compose.material.pullrefresh.pullRefresh
+import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
@@ -72,15 +74,20 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Offset
 import androidx.compose.ui.unit.dp
 import com.gptnmanager.MainViewModel
 import com.gptnmanager.data.AppMessage
@@ -94,7 +101,10 @@ import com.gptnmanager.ui.theme.WarningColor
 import kotlinx.coroutines.delay
 
 private enum class TabItem(val label: String) {
-    Dashboard("Dashboard"), Users("Users"), Settings("Settings")
+    Dashboard("Dashboard"),
+    Users("Users"),
+    Servers("Servers"),
+    Settings("Settings")
 }
 
 @Composable
@@ -102,19 +112,28 @@ fun GPTNApp(viewModel: MainViewModel) {
     var currentTab by rememberSaveable { mutableStateOf(TabItem.Dashboard) }
     var toastMessage by remember { mutableStateOf<AppMessage?>(null) }
 
-    LaunchedEffect(viewModel.message) {
+    LaunchedEffect(viewModel.message?.id) {
         val msg = viewModel.message ?: return@LaunchedEffect
         toastMessage = msg
-        viewModel.dismissMessage()
         delay(2500)
-        toastMessage = null
+        if (toastMessage?.id == msg.id) {
+            toastMessage = null
+        }
+        if (viewModel.message?.id == msg.id) {
+            viewModel.dismissMessage()
+        }
     }
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             bottomBar = {
                 NavigationBar(windowInsets = WindowInsets.navigationBars) {
-                    listOf(TabItem.Dashboard, TabItem.Users, TabItem.Settings).forEach { tab ->
+                    listOf(
+                        TabItem.Dashboard,
+                        TabItem.Users,
+                        TabItem.Servers,
+                        TabItem.Settings
+                    ).forEach { tab ->
                         NavigationBarItem(
                             selected = currentTab == tab,
                             onClick = { currentTab = tab },
@@ -123,6 +142,7 @@ fun GPTNApp(viewModel: MainViewModel) {
                                     imageVector = when (tab) {
                                         TabItem.Dashboard -> Icons.Rounded.Home
                                         TabItem.Users -> Icons.Rounded.People
+                                        TabItem.Servers -> Icons.Rounded.Storage
                                         TabItem.Settings -> Icons.Rounded.Settings
                                     },
                                     contentDescription = tab.label,
@@ -138,6 +158,7 @@ fun GPTNApp(viewModel: MainViewModel) {
                 when (currentTab) {
                     TabItem.Dashboard -> DashboardScreen(viewModel)
                     TabItem.Users -> UsersScreen(viewModel)
+                    TabItem.Servers -> ServersScreen(viewModel)
                     TabItem.Settings -> SettingsScreen(viewModel)
                 }
 
@@ -182,7 +203,6 @@ private fun FancyToast(
     message: AppMessage,
     onClose: () -> Unit,
 ) {
-
     val (color, icon) = when (message.type) {
         MessageType.SUCCESS -> Pair(SuccessColor, Icons.Rounded.CheckCircle)
         MessageType.ERROR -> Pair(ErrorColor, Icons.Rounded.Error)
@@ -193,21 +213,19 @@ private fun FancyToast(
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 80.dp), // bikin posisi kanan
+            .padding(start = 80.dp),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
         elevation = CardDefaults.cardElevation(10.dp)
     ) {
-
         Row(
             modifier = Modifier
                 .padding(14.dp)
                 .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
-
             Box(
                 modifier = Modifier
                     .size(34.dp)
@@ -228,7 +246,7 @@ private fun FancyToast(
 
             Spacer(Modifier.width(6.dp))
 
-            IconButton(onClick = onClose) {
+            TextButton(onClick = onClose) {
                 Text("×")
             }
         }
@@ -276,129 +294,135 @@ private fun DashboardScreen(viewModel: MainViewModel) {
         )
     }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(16.dp),
-        verticalArrangement = Arrangement.spacedBy(14.dp),
-    ) {
-        item {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                Column {
-                    Text(
-                        "ZIVPN Manager by YINN",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Bold
-                    )
-                    Text("Dashboard server & akun")
-                }
-                Row {
-                    FilledIconButton(onClick = { viewModel.refreshAll() }) {
-                        Icon(Icons.Rounded.Refresh, contentDescription = "Refresh")
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    FilledIconButton(onClick = { showServerSheet = true }) {
-                        Icon(Icons.Rounded.Add, contentDescription = "Tambah server")
-                    }
-                }
-            }
-        }
+    val pullRefreshState = rememberPullRefreshState(
+        refreshing = viewModel.isLoading,
+        onRefresh = { viewModel.refreshAll(showMessage = false) }
+    )
 
-        val activeServer = viewModel.activeServer
-        if (activeServer == null) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pullRefresh(pullRefreshState)
+    ) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
             item {
-                EmptyServerCard(onAdd = { showServerSheet = true })
-            }
-        } else {
-            item {
-                ServerCard(
-                    server = activeServer,
-                    totalServer = viewModel.servers.size,
-                    onSwitch = { showActions = true },
-                    onManage = { editServer = activeServer; showServerSheet = true },
-                )
-            }
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    StatCard(
-                        modifier = Modifier.weight(1f),
-                        title = "Users",
-                        value = viewModel.users.size.toString(),
-                        icon = Icons.Rounded.People,
-                    )
-                    PingStatusCard(
-                        modifier = Modifier.weight(1f),
-                        pingMs = viewModel.pingMs
-                    )
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Column {
+                        Text(
+                            "ZIVPN Manager by YINN",
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Text("Dashboard server & akun")
+                    }
+                    Row {
+                        FilledIconButton(onClick = { viewModel.refreshAll(showMessage = false) }) {
+                            Icon(Icons.Rounded.Refresh, contentDescription = "Refresh")
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        FilledIconButton(onClick = { showServerSheet = true }) {
+                            Icon(Icons.Rounded.Add, contentDescription = "Tambah server")
+                        }
+                    }
                 }
             }
-            item {
-                Card(
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Text("System Info", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                        if (viewModel.systemInfo.isEmpty()) {
-                            Text("Belum ada data")
-                        } else {
-                            viewModel.systemInfo.entries.take(8).forEach { entry ->
-                                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                    Text(entry.key)
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(entry.value, maxLines = 1, overflow = TextOverflow.Ellipsis)
+
+            val activeServer = viewModel.activeServer
+            if (activeServer == null) {
+                item {
+                    EmptyServerCard(onAdd = { showServerSheet = true })
+                }
+            } else {
+                item {
+                    ServerCard(
+                        server = activeServer,
+                        totalServer = viewModel.servers.size,
+                        onSwitch = { showActions = true },
+                        onManage = { editServer = activeServer; showServerSheet = true },
+                    )
+                }
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        StatCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Users",
+                            value = viewModel.users.size.toString(),
+                            icon = Icons.Rounded.People,
+                        )
+                        PingStatusCard(
+                            modifier = Modifier.weight(1f),
+                            pingMs = viewModel.pingMs
+                        )
+                    }
+                }
+                item {
+                    Card(
+                        shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            Text("System Info", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                            if (viewModel.systemInfo.isEmpty()) {
+                                Text("Belum ada data")
+                            } else {
+                                viewModel.systemInfo.entries.take(8).forEach { entry ->
+                                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                        Text(entry.key)
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(entry.value, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    }
                                 }
                             }
                         }
                     }
                 }
-            }
-            item {
-                Text("Quick Actions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            }
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ActionCard(
-                        modifier = Modifier.weight(1f),
-                        title = "Create User",
-                        onClick = { showActions = true }
-                    )
-                    ActionCard(
-                        modifier = Modifier.weight(1f),
-                        title = "Create Trial",
-                        onClick = { showActions = true }
-                    )
+                item {
+                    Text("Quick Actions", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                 }
-            }
-            item {
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ActionCard(
-                        modifier = Modifier.weight(1f),
-                        title = "Expire Check",
-                        onClick = { viewModel.triggerExpire() }
-                    )
-                    ActionCard(
-                        modifier = Modifier.weight(1f),
-                        title = "Refresh",
-                        onClick = { viewModel.refreshAll() }
-                    )
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        ActionCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Create User",
+                            onClick = { showActions = true }
+                        )
+                        ActionCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Create Trial",
+                            onClick = { showActions = true }
+                        )
+                    }
                 }
-            }
-            item {
-                Text("Saved Servers", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-            }
-            items(viewModel.servers, key = { it.id }) { server ->
-                ServerListItem(
-                    server = server,
-                    onClick = { viewModel.setActiveServer(server.id) },
-                    onEdit = { editServer = server; showServerSheet = true },
-                    onDelete = { viewModel.deleteServer(server.id) },
-                )
+                item {
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        ActionCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Expire Check",
+                            onClick = { viewModel.triggerExpire() }
+                        )
+                        ActionCard(
+                            modifier = Modifier.weight(1f),
+                            title = "Refresh",
+                            onClick = { viewModel.refreshAll(showMessage = false) }
+                        )
+                    }
+                }
             }
         }
+
+        PullRefreshIndicator(
+            refreshing = viewModel.isLoading,
+            state = pullRefreshState,
+            modifier = Modifier.align(Alignment.TopCenter)
+        )
     }
 }
 
@@ -407,6 +431,7 @@ private fun UsersScreen(viewModel: MainViewModel) {
     var query by rememberSaveable { mutableStateOf("") }
     var renewTarget by remember { mutableStateOf<UserItem?>(null) }
     var deleteTarget by remember { mutableStateOf<UserItem?>(null) }
+
     val filtered = remember(viewModel.users, query) {
         if (query.isBlank()) viewModel.users else viewModel.users.filter {
             it.username.contains(query, ignoreCase = true)
@@ -435,64 +460,149 @@ private fun UsersScreen(viewModel: MainViewModel) {
         )
     }
 
+    val pullRefreshState = rememberPullRefreshState(
+        refreshing = viewModel.isLoading,
+        onRefresh = { viewModel.refreshAll(showMessage = false) }
+    )
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .pullRefresh(pullRefreshState)
+    ) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text("Users", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    RoundedInput(
+                        value = query,
+                        onValueChange = { query = it },
+                        label = "Cari user",
+                        singleLine = true
+                    )
+                    Text("Total: ${filtered.size} user")
+                }
+            }
+
+            if (viewModel.activeServer == null) {
+                item { Text("Belum ada server aktif") }
+            } else if (filtered.isEmpty()) {
+                item {
+                    Card(shape = RoundedCornerShape(22.dp)) {
+                        Text("Belum ada data user", modifier = Modifier.padding(18.dp))
+                    }
+                }
+            } else {
+                items(filtered, key = { it.username }) { item ->
+                    Card(
+                        shape = RoundedCornerShape(22.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(item.username, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
+                                Row {
+                                    MiniActionButton(
+                                        text = "Renew",
+                                        color = WarningColor,
+                                        onClick = { renewTarget = item }
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    MiniActionButton(
+                                        text = "Delete",
+                                        color = ErrorColor,
+                                        onClick = { deleteTarget = item }
+                                    )
+                                }
+                            }
+                            item.status?.let { Text("Status: $it") }
+                            item.expireAt?.let { Text("Expire: $it") }
+                            item.daysLeft?.let { Text("Sisa hari: $it") }
+                        }
+                    }
+                }
+            }
+        }
+
+        PullRefreshIndicator(
+            refreshing = viewModel.isLoading,
+            state = pullRefreshState,
+            modifier = Modifier.align(Alignment.TopCenter)
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ServersScreen(viewModel: MainViewModel) {
+    var showServerSheet by remember { mutableStateOf(false) }
+    var editServer by remember { mutableStateOf<ServerConfig?>(null) }
+
+    if (showServerSheet) {
+        ServerSheet(
+            initial = editServer,
+            onDismiss = {
+                showServerSheet = false
+                editServer = null
+            },
+            onTest = { host, apiKey -> viewModel.testServer(host, apiKey) },
+            onSave = { id, name, host, apiKey ->
+                viewModel.addOrUpdateServer(id, name, host, apiKey)
+                showServerSheet = false
+                editServer = null
+            }
+        )
+    }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Users", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                RoundedInput(
-                    value = query,
-                    onValueChange = { query = it },
-                    label = "Cari user",
-                    singleLine = true
-                )
-                Text("Total: ${filtered.size} user")
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Servers", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                FilledIconButton(onClick = {
+                    editServer = null
+                    showServerSheet = true
+                }) {
+                    Icon(Icons.Rounded.Add, contentDescription = "Tambah server")
+                }
             }
         }
 
-        if (viewModel.activeServer == null) {
-            item { Text("Belum ada server aktif") }
-        } else if (filtered.isEmpty()) {
+        if (viewModel.servers.isEmpty()) {
             item {
-                Card(shape = RoundedCornerShape(22.dp)) {
-                    Text("Belum ada data user", modifier = Modifier.padding(18.dp))
-                }
-            }
-        } else {
-            items(filtered, key = { it.username }) { item ->
                 Card(
                     shape = RoundedCornerShape(22.dp),
                     colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(item.username, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
-                            Row {
-                                MiniActionButton(
-                                    text = "Renew",
-                                    color = WarningColor,
-                                    onClick = { renewTarget = item }
-                                )
-                                Spacer(Modifier.width(8.dp))
-                                MiniActionButton(
-                                    text = "Delete",
-                                    color = ErrorColor,
-                                    onClick = { deleteTarget = item }
-                                )
-                            }
-                        }
-                        item.status?.let { Text("Status: $it") }
-                        item.expireAt?.let { Text("Expire: $it") }
-                        item.daysLeft?.let { Text("Sisa hari: $it") }
-                    }
+                    Text("Belum ada server tersimpan", modifier = Modifier.padding(18.dp))
                 }
+            }
+        } else {
+            items(viewModel.servers, key = { it.id }) { server ->
+                ServerListItem(
+                    server = server,
+                    onClick = { viewModel.setActiveServer(server.id) },
+                    onEdit = {
+                        editServer = server
+                        showServerSheet = true
+                    },
+                    onDelete = { viewModel.deleteServer(server.id) }
+                )
             }
         }
     }
@@ -625,8 +735,8 @@ private fun StatCard(modifier: Modifier, title: String, value: String, icon: Ima
 private fun PingStatusCard(modifier: Modifier, pingMs: Long) {
     val pingColor = when {
         pingMs < 0 -> ErrorColor
-        pingMs in 1..199 -> SuccessColor
-        pingMs in 200..499 -> WarningColor
+        pingMs in 1..389 -> SuccessColor
+        pingMs in 390..599 -> WarningColor
         else -> ErrorColor
     }
 
@@ -642,20 +752,30 @@ private fun PingStatusCard(modifier: Modifier, pingMs: Long) {
                 Box(
                     modifier = Modifier
                         .size(12.dp)
+                        .shadow(12.dp, CircleShape, spotColor = pingColor, ambientColor = pingColor)
                         .background(pingColor, CircleShape)
                 )
                 Spacer(Modifier.width(8.dp))
                 Text("Status")
             }
+
             Text(
                 if (pingMs < 0) "Offline" else "Online",
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold
             )
+
             Text(
                 pingText,
                 color = pingColor,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.Bold,
+                style = TextStyle(
+                    shadow = Shadow(
+                        color = pingColor.copy(alpha = 0.95f),
+                        offset = Offset(0f, 0f),
+                        blurRadius = 16f
+                    )
+                )
             )
         }
     }
