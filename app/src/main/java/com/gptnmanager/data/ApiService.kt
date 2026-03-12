@@ -78,11 +78,13 @@ class ApiService {
     private fun parseInfo(body: String): Map<String, String> {
         return try {
             val obj = JSONObject(body)
-            val source = when {
+            val source: JSONObject = when {
                 obj.has("data") && obj.opt("data") is JSONObject -> obj.getJSONObject("data")
                 else -> obj
             }
-            source.keys().asSequence().associateWith { key -> source.opt(key).toString() }
+            source.keys().asSequence().associateWith { key ->
+                source.opt(key)?.toString().orEmpty()
+            }
         } catch (_: Throwable) {
             mapOf("raw" to body)
         }
