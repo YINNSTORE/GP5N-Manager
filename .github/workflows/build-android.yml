@@ -1,8 +1,6 @@
 name: Build Android APK
 
 on:
-  push:
-    branches: ["main"]
   workflow_dispatch:
     inputs:
       version:
@@ -51,19 +49,19 @@ jobs:
         run: |
           mkdir -p release-output
           APK_PATH=$(find app/build/outputs/apk/release -name "*.apk" | head -n 1)
-          cp "$APK_PATH" "release-output/GPTN-Manager-v${{ github.event.inputs.version || 'auto' }}.apk"
+          cp "$APK_PATH" "release-output/GPTN-Manager-v${{ github.event.inputs.version }}.apk"
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
         with:
-          name: gptn-manager-release-v${{ github.event.inputs.version || github.run_number }}
+          name: gptn-manager-release-v${{ github.event.inputs.version }}
           path: release-output/*.apk
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v${{ github.event.inputs.version || github.run_number }}
-          name: ${{ github.event.inputs.release_name || 'GPTN Manager Release' }} v${{ github.event.inputs.version || github.run_number }}
+          tag_name: v${{ github.event.inputs.version }}
+          name: ${{ github.event.inputs.release_name }} v${{ github.event.inputs.version }}
           files: release-output/*.apk
           generate_release_notes: true
         env:
