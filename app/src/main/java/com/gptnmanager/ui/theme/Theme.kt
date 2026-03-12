@@ -43,4 +43,4 @@ fun GPTNManagerTheme(
         typography = Typography,
         content = content,
     )
-}n
+}
