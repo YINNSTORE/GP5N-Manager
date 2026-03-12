@@ -6,6 +6,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
@@ -32,6 +34,7 @@ import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Dns
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Error
 import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Info
@@ -42,6 +45,8 @@ import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -55,12 +60,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -275,7 +280,11 @@ private fun DashboardScreen(viewModel: MainViewModel) {
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Column {
-                    Text("GPTN Manager", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                    Text(
+                        "ZIVPN Manager by YINN",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Bold
+                    )
                     Text("Dashboard server & akun")
                 }
                 Row {
@@ -312,16 +321,17 @@ private fun DashboardScreen(viewModel: MainViewModel) {
                         value = viewModel.users.size.toString(),
                         icon = Icons.Rounded.People,
                     )
-                    StatCard(
+                    PingStatusCard(
                         modifier = Modifier.weight(1f),
-                        title = "Status",
-                        value = "Online",
-                        icon = Icons.Rounded.Cloud,
+                        pingMs = viewModel.pingMs
                     )
                 }
             }
             item {
-                Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+                Card(
+                    shape = RoundedCornerShape(24.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+                ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         Text("System Info", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                         if (viewModel.systemInfo.isEmpty()) {
@@ -343,14 +353,30 @@ private fun DashboardScreen(viewModel: MainViewModel) {
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ActionCard(modifier = Modifier.weight(1f), title = "Create User", onClick = { showActions = true })
-                    ActionCard(modifier = Modifier.weight(1f), title = "Create Trial", onClick = { showActions = true })
+                    ActionCard(
+                        modifier = Modifier.weight(1f),
+                        title = "Create User",
+                        onClick = { showActions = true }
+                    )
+                    ActionCard(
+                        modifier = Modifier.weight(1f),
+                        title = "Create Trial",
+                        onClick = { showActions = true }
+                    )
                 }
             }
             item {
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    ActionCard(modifier = Modifier.weight(1f), title = "Expire Check", onClick = { viewModel.triggerExpire() })
-                    ActionCard(modifier = Modifier.weight(1f), title = "Refresh", onClick = { viewModel.refreshAll() })
+                    ActionCard(
+                        modifier = Modifier.weight(1f),
+                        title = "Expire Check",
+                        onClick = { viewModel.triggerExpire() }
+                    )
+                    ActionCard(
+                        modifier = Modifier.weight(1f),
+                        title = "Refresh",
+                        onClick = { viewModel.refreshAll() }
+                    )
                 }
             }
             item {
@@ -409,12 +435,11 @@ private fun UsersScreen(viewModel: MainViewModel) {
         item {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text("Users", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
-                OutlinedTextField(
+                RoundedInput(
                     value = query,
                     onValueChange = { query = it },
-                    modifier = Modifier.fillMaxWidth(),
-                    label = { Text("Cari user") },
-                    singleLine = true,
+                    label = "Cari user",
+                    singleLine = true
                 )
                 Text("Total: ${filtered.size} user")
             }
@@ -430,14 +455,29 @@ private fun UsersScreen(viewModel: MainViewModel) {
             }
         } else {
             items(filtered, key = { it.username }) { item ->
-                Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+                Card(
+                    shape = RoundedCornerShape(22.dp),
+                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+                ) {
                     Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
                             Text(item.username, fontWeight = FontWeight.Bold, style = MaterialTheme.typography.titleMedium)
                             Row {
-                                AssistChip(onClick = { renewTarget = item }, label = { Text("Renew") })
+                                MiniActionButton(
+                                    text = "Renew",
+                                    color = WarningColor,
+                                    onClick = { renewTarget = item }
+                                )
                                 Spacer(Modifier.width(8.dp))
-                                AssistChip(onClick = { deleteTarget = item }, label = { Text("Delete") })
+                                MiniActionButton(
+                                    text = "Delete",
+                                    color = ErrorColor,
+                                    onClick = { deleteTarget = item }
+                                )
                             }
                         }
                         item.status?.let { Text("Status: $it") }
@@ -461,7 +501,10 @@ private fun SettingsScreen(viewModel: MainViewModel) {
             Text("Settings", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
         }
         item {
-            Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+            ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                     Text("Theme", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -482,10 +525,13 @@ private fun SettingsScreen(viewModel: MainViewModel) {
             }
         }
         item {
-            Card(shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+            Card(
+                shape = RoundedCornerShape(24.dp),
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+            ) {
                 Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     Text("App Info", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                    Text("GPTN Manager v1.0.0")
+                    Text("ZIVPN Manager by YINN v1.0.0")
                     Text("Native Android • Kotlin + Jetpack Compose")
                 }
             }
@@ -495,7 +541,10 @@ private fun SettingsScreen(viewModel: MainViewModel) {
 
 @Composable
 private fun EmptyServerCard(onAdd: () -> Unit) {
-    Card(shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+    Card(
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+    ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
@@ -506,14 +555,21 @@ private fun EmptyServerCard(onAdd: () -> Unit) {
             Icon(Icons.Rounded.Dns, null, modifier = Modifier.size(52.dp))
             Text("Belum ada server", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Text("Tambah domain/IP VPS dan API Key dulu biar dashboard jalan.")
-            OutlinedButton(onClick = onAdd) { Text("Tambah Server") }
+            PrimaryActionButton(
+                text = "Tambah Server",
+                color = MaterialTheme.colorScheme.primary,
+                onClick = onAdd
+            )
         }
     }
 }
 
 @Composable
 private fun ServerCard(server: ServerConfig, totalServer: Int, onSwitch: () -> Unit, onManage: () -> Unit) {
-    Card(shape = RoundedCornerShape(28.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)) {
+    Card(
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer)
+    ) {
         Column(modifier = Modifier.padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.Dns, null)
@@ -527,8 +583,16 @@ private fun ServerCard(server: ServerConfig, totalServer: Int, onSwitch: () -> U
             Text("Base URL: ${server.baseUrl}")
             Text("Total saved server: $totalServer")
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                OutlinedButton(onClick = onSwitch) { Text("Quick Action") }
-                OutlinedButton(onClick = onManage) { Text("Edit Server") }
+                PrimaryActionButton(
+                    text = "Quick Action",
+                    color = MaterialTheme.colorScheme.primary,
+                    onClick = onSwitch
+                )
+                PrimaryActionButton(
+                    text = "Edit Server",
+                    color = InfoColor,
+                    onClick = onManage
+                )
             }
         }
     }
@@ -536,11 +600,55 @@ private fun ServerCard(server: ServerConfig, totalServer: Int, onSwitch: () -> U
 
 @Composable
 private fun StatCard(modifier: Modifier, title: String, value: String, icon: ImageVector) {
-    Card(modifier = modifier, shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+    ) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Icon(icon, null)
             Text(title)
             Text(value, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        }
+    }
+}
+
+@Composable
+private fun PingStatusCard(modifier: Modifier, pingMs: Long) {
+    val pingColor = when {
+        pingMs < 0 -> ErrorColor
+        pingMs in 1..199 -> SuccessColor
+        pingMs in 200..499 -> WarningColor
+        else -> ErrorColor
+    }
+
+    val pingText = if (pingMs < 0) "Offline" else "${pingMs} ms"
+
+    Card(
+        modifier = modifier,
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+    ) {
+        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(12.dp)
+                        .background(pingColor, CircleShape)
+                )
+                Spacer(Modifier.width(8.dp))
+                Text("Status")
+            }
+            Text(
+                if (pingMs < 0) "Offline" else "Online",
+                style = MaterialTheme.typography.headlineSmall,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                pingText,
+                color = pingColor,
+                fontWeight = FontWeight.SemiBold
+            )
         }
     }
 }
@@ -560,9 +668,16 @@ private fun ActionCard(modifier: Modifier, title: String, onClick: () -> Unit) {
 
 @Composable
 private fun ServerListItem(server: ServerConfig, onClick: () -> Unit, onEdit: () -> Unit, onDelete: () -> Unit) {
-    Card(shape = RoundedCornerShape(22.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
+    Card(
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
+    ) {
         Column(modifier = Modifier.padding(16.dp)) {
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(server.name, fontWeight = FontWeight.Bold)
                     Text(server.host, maxLines = 1, overflow = TextOverflow.Ellipsis)
@@ -573,12 +688,83 @@ private fun ServerListItem(server: ServerConfig, onClick: () -> Unit, onEdit: ()
             }
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedButton(onClick = onClick) { Text("Pakai") }
-                OutlinedButton(onClick = onEdit) { Text("Edit") }
-                IconButton(onClick = onDelete) { Icon(Icons.Rounded.Delete, contentDescription = "Delete") }
+                PrimaryActionButton(
+                    text = "Pakai",
+                    color = SuccessColor,
+                    onClick = onClick
+                )
+                PrimaryActionButton(
+                    text = "Edit",
+                    color = InfoColor,
+                    onClick = onEdit
+                )
+                IconButton(
+                    onClick = onDelete,
+                    modifier = Modifier
+                        .background(ErrorColor.copy(alpha = 0.12f), CircleShape)
+                        .border(1.dp, ErrorColor.copy(alpha = 0.25f), CircleShape)
+                ) {
+                    Icon(Icons.Rounded.Delete, contentDescription = "Delete", tint = ErrorColor)
+                }
             }
         }
     }
+}
+
+@Composable
+private fun PrimaryActionButton(
+    text: String,
+    color: Color,
+    onClick: () -> Unit,
+) {
+    Button(
+        onClick = onClick,
+        shape = RoundedCornerShape(18.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = color.copy(alpha = 0.14f),
+            contentColor = color
+        ),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 10.dp),
+    ) {
+        Text(text, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
+private fun MiniActionButton(
+    text: String,
+    color: Color,
+    onClick: () -> Unit,
+) {
+    Button(
+        onClick = onClick,
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = color.copy(alpha = 0.14f),
+            contentColor = color
+        ),
+        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp),
+    ) {
+        Text(text, fontWeight = FontWeight.SemiBold)
+    }
+}
+
+@Composable
+private fun RoundedInput(
+    value: String,
+    onValueChange: (String) -> Unit,
+    label: String,
+    singleLine: Boolean = false,
+) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        modifier = Modifier.fillMaxWidth(),
+        label = { Text(label) },
+        singleLine = singleLine,
+        shape = RoundedCornerShape(20.dp),
+        colors = TextFieldDefaults.colors()
+    )
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -595,15 +781,29 @@ private fun ServerSheet(
 
     ModalBottomSheet(onDismissRequest = onDismiss) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(if (initial == null) "Tambah Server" else "Edit Server", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-            OutlinedTextField(value = name, onValueChange = { name = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Nama server") })
-            OutlinedTextField(value = host, onValueChange = { host = it }, modifier = Modifier.fillMaxWidth(), label = { Text("Domain / IP VPS") })
-            OutlinedTextField(value = apiKey, onValueChange = { apiKey = it }, modifier = Modifier.fillMaxWidth(), label = { Text("API Key") })
+            Text(
+                if (initial == null) "Tambah Server" else "Edit Server",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold
+            )
+            RoundedInput(value = name, onValueChange = { name = it }, label = "Nama server")
+            RoundedInput(value = host, onValueChange = { host = it }, label = "Domain / IP VPS")
+            RoundedInput(value = apiKey, onValueChange = { apiKey = it }, label = "API Key")
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedButton(modifier = Modifier.weight(1f), onClick = { onTest(host, apiKey) }) { Text("Test") }
-                OutlinedButton(modifier = Modifier.weight(1f), onClick = {
-                    if (host.isNotBlank() && apiKey.isNotBlank()) onSave(initial?.id, name, host, apiKey)
-                }) { Text("Save") }
+                PrimaryActionButton(
+                    text = "Test",
+                    color = WarningColor,
+                    onClick = { onTest(host, apiKey) }
+                )
+                PrimaryActionButton(
+                    text = "Save",
+                    color = SuccessColor,
+                    onClick = {
+                        if (host.isNotBlank() && apiKey.isNotBlank()) {
+                            onSave(initial?.id, name, host, apiKey)
+                        }
+                    }
+                )
             }
             Spacer(Modifier.height(12.dp))
         }
@@ -619,7 +819,7 @@ private fun QuickActionsDialog(
 ) {
     var username by rememberSaveable { mutableStateOf("") }
     var mode by rememberSaveable { mutableIntStateOf(0) }
-    var duration by rememberSaveable { mutableStateOf("30") }
+    var duration by rememberSaveable { mutableStateOf("") }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -627,44 +827,99 @@ private fun QuickActionsDialog(
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(selected = mode == 0, onClick = { mode = 0; duration = "30" }, label = { Text("User") })
-                    FilterChip(selected = mode == 1, onClick = { mode = 1; duration = "60" }, label = { Text("Trial") })
-                    FilterChip(selected = mode == 2, onClick = { mode = 2 }, label = { Text("Expire") })
+                    FilterChip(
+                        selected = mode == 0,
+                        onClick = {
+                            mode = 0
+                            duration = ""
+                        },
+                        label = { Text("User") }
+                    )
+                    FilterChip(
+                        selected = mode == 1,
+                        onClick = {
+                            mode = 1
+                            duration = ""
+                        },
+                        label = { Text("Trial") }
+                    )
+                    FilterChip(
+                        selected = mode == 2,
+                        onClick = { mode = 2 },
+                        label = { Text("Expire") }
+                    )
                 }
                 if (mode != 2) {
-                    OutlinedTextField(value = username, onValueChange = { username = it }, label = { Text("Username / Password") }, singleLine = true)
-                    OutlinedTextField(value = duration, onValueChange = { duration = it }, label = { Text(if (mode == 0) "Days" else "Minutes") }, singleLine = true)
+                    RoundedInput(
+                        value = username,
+                        onValueChange = { username = it },
+                        label = "Username / Password",
+                        singleLine = true
+                    )
+                    RoundedInput(
+                        value = duration,
+                        onValueChange = { duration = it },
+                        label = if (mode == 0) "Days" else "Minutes",
+                        singleLine = true
+                    )
                 } else {
                     Text("Trigger pengecekan expired manual sekarang.")
                 }
             }
         },
         confirmButton = {
-            TextButton(onClick = {
-                when (mode) {
-                    0 -> onCreateUser(username.trim(), duration.toIntOrNull() ?: 30)
-                    1 -> onCreateTrial(username.trim(), duration.toIntOrNull() ?: 60)
-                    else -> onExpire()
+            TextButton(
+                onClick = {
+                    when (mode) {
+                        0 -> {
+                            val value = duration.toIntOrNull()
+                            if (username.isNotBlank() && value != null) {
+                                onCreateUser(username.trim(), value)
+                            }
+                        }
+                        1 -> {
+                            val value = duration.toIntOrNull()
+                            if (username.isNotBlank() && value != null) {
+                                onCreateTrial(username.trim(), value)
+                            }
+                        }
+                        else -> onExpire()
+                    }
                 }
-            }) { Text("Jalanin") }
+            ) { Text("Jalanin") }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Tutup") } }
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Tutup") }
+        }
     )
 }
 
 @Composable
 private fun RenewDialog(username: String, onDismiss: () -> Unit, onSubmit: (Int) -> Unit) {
-    var days by rememberSaveable { mutableStateOf("30") }
+    var days by rememberSaveable { mutableStateOf("") }
+
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Renew User") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 Text(username)
-                OutlinedTextField(value = days, onValueChange = { days = it }, label = { Text("Days") }, singleLine = true)
+                RoundedInput(
+                    value = days,
+                    onValueChange = { days = it },
+                    label = "Days",
+                    singleLine = true
+                )
             }
         },
-        confirmButton = { TextButton(onClick = { onSubmit(days.toIntOrNull() ?: 30) }) { Text("Renew") } },
+        confirmButton = {
+            TextButton(
+                onClick = {
+                    val value = days.toIntOrNull()
+                    if (value != null) onSubmit(value)
+                }
+            ) { Text("Renew") }
+        },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Batal") } }
     )
 }
