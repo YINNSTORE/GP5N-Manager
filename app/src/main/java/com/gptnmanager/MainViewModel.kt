@@ -1,0 +1,198 @@
+package com.gptnmanager
+
+import android.app.Application
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.viewModelScope
+import com.gptnmanager.data.ApiService
+import com.gptnmanager.data.AppMessage
+import com.gptnmanager.data.ServerConfig
+import com.gptnmanager.data.ServerStorage
+import com.gptnmanager.data.UserItem
+import kotlinx.coroutines.launch
+import kotlin.random.Random
+
+class MainViewModel(application: Application) : AndroidViewModel(application) {
+    private val storage = ServerStorage(application)
+    private val api = ApiService()
+
+    val servers = mutableStateListOf<ServerConfig>()
+    var users by mutableStateOf<List<UserItem>>(emptyList())
+        private set
+    var systemInfo by mutableStateOf<Map<String, String>>(emptyMap())
+        private set
+    var isLoading by mutableStateOf(false)
+        private set
+    var isDarkMode by mutableStateOf(true)
+        private set
+    var message by mutableStateOf<AppMessage?>(null)
+        private set
+
+    val activeServer: ServerConfig?
+        get() = servers.firstOrNull { it.isActive } ?: servers.firstOrNull()
+
+    init {
+        isDarkMode = storage.loadDarkMode()
+        servers.addAll(storage.loadServers())
+        if (servers.isNotEmpty()) refreshAll()
+    }
+
+    fun dismissMessage() {
+        message = null
+    }
+
+    fun setDarkMode(value: Boolean) {
+        isDarkMode = value
+        storage.saveDarkMode(value)
+    }
+
+    fun addOrUpdateServer(existingId: String?, name: String, host: String, apiKey: String) {
+        val safeName = name.ifBlank { "Server ${Random.nextInt(100, 999)}" }
+        val list = servers.toMutableList()
+        if (existingId == null) {
+            val item = ServerConfig(
+                id = System.currentTimeMillis().toString(),
+                name = safeName,
+                host = host.trim(),
+                apiKey = apiKey.trim(),
+                isActive = list.isEmpty(),
+            )
+            list.add(item)
+        } else {
+            val index = list.indexOfFirst { it.id == existingId }
+            if (index >= 0) {
+                val old = list[index]
+                list[index] = old.copy(name = safeName, host = host.trim(), apiKey = apiKey.trim())
+            }
+        }
+        replaceServers(list)
+        refreshAll()
+    }
+
+    fun deleteServer(id: String) {
+        val list = servers.filterNot { it.id == id }.toMutableList()
+        if (list.isNotEmpty() && list.none { it.isActive }) {
+            list[0] = list[0].copy(isActive = true)
+        }
+        replaceServers(list)
+        if (list.isNotEmpty()) refreshAll() else {
+            users = emptyList()
+            systemInfo = emptyMap()
+        }
+        message = AppMessage("Server dihapus")
+    }
+
+    fun setActiveServer(id: String) {
+        replaceServers(servers.map { it.copy(isActive = it.id == id) })
+        refreshAll()
+    }
+
+    fun testServer(host: String, apiKey: String) {
+        val temp = ServerConfig(id = "tmp", name = "Temp", host = host, apiKey = apiKey, isActive = true)
+        viewModelScope.launch {
+            isLoading = true
+            try {
+                api.getInfo(temp)
+                message = AppMessage("Koneksi sukses")
+            } catch (t: Throwable) {
+                message = AppMessage("Koneksi gagal: ${t.message}", true)
+            } finally {
+                isLoading = false
+            }
+        }
+    }
+
+    fun refreshAll() {
+        val server = activeServer ?: return
+        viewModelScope.launch {
+            isLoading = true
+            try {
+                systemInfo = api.getInfo(server)
+                users = api.getUsers(server)
+            } catch (t: Throwable) {
+                message = AppMessage("Gagal ambil data: ${t.message}", true)
+            } finally {
+                isLoading = false
+            }
+        }
+    }
+
+    fun createUser(username: String, days: Int) {
+        val server = activeServer ?: return
+        viewModelScope.launch {
+            isLoading = true
+            try {
+                message = AppMessage(api.createUser(server, username, days = days))
+                refreshAll()
+            } catch (t: Throwable) {
+                isLoading = false
+                message = AppMessage("Create user gagal: ${t.message}", true)
+            }
+        }
+    }
+
+    fun createTrial(username: String, minutes: Int) {
+        val server = activeServer ?: return
+        viewModelScope.launch {
+            isLoading = true
+            try {
+                message = AppMessage(api.createUser(server, username, minutes = minutes))
+                refreshAll()
+            } catch (t: Throwable) {
+                isLoading = false
+                message = AppMessage("Create trial gagal: ${t.message}", true)
+            }
+        }
+    }
+
+    fun renewUser(username: String, days: Int) {
+        val server = activeServer ?: return
+        viewModelScope.launch {
+            isLoading = true
+            try {
+                message = AppMessage(api.renewUser(server, username, days))
+                refreshAll()
+            } catch (t: Throwable) {
+                isLoading = false
+                message = AppMessage("Renew gagal: ${t.message}", true)
+            }
+        }
+    }
+
+    fun deleteUser(username: String) {
+        val server = activeServer ?: return
+        viewModelScope.launch {
+            isLoading = true
+            try {
+                message = AppMessage(api.deleteUser(server, username))
+                refreshAll()
+            } catch (t: Throwable) {
+                isLoading = false
+                message = AppMessage("Delete gagal: ${t.message}", true)
+            }
+        }
+    }
+
+    fun triggerExpire() {
+        val server = activeServer ?: return
+        viewModelScope.launch {
+            isLoading = true
+            try {
+                message = AppMessage(api.triggerExpire(server))
+                refreshAll()
+            } catch (t: Throwable) {
+                isLoading = false
+                message = AppMessage("Trigger expire gagal: ${t.message}", true)
+            }
+        }
+    }
+
+    private fun replaceServers(list: List<ServerConfig>) {
+        servers.clear()
+        servers.addAll(list)
+        storage.saveServers(list)
+    }
+}
