@@ -25,7 +25,7 @@ jobs:
           gradle-version: 8.9
 
       - name: Build release APK
-        run: gradle assembleRelease -x lintVitalAnalyzeRelease
+        run: gradle assembleRelease
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
