@@ -37,4 +37,5 @@ data class AppMessage(
     val text: String,
     val isError: Boolean = false,
     val type: MessageType = if (isError) MessageType.ERROR else MessageType.SUCCESS,
+    val id: Long = System.currentTimeMillis(),
 )
