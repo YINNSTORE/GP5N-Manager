@@ -174,7 +174,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun createUser(username: String, days: Int) {
         val server = activeServer ?: return
-
         viewModelScope.launch {
             isLoading = true
             try {
@@ -192,7 +191,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun createTrial(username: String, minutes: Int) {
         val server = activeServer ?: return
-
         viewModelScope.launch {
             isLoading = true
             try {
@@ -210,7 +208,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun renewUser(username: String, days: Int) {
         val server = activeServer ?: return
-
         viewModelScope.launch {
             isLoading = true
             try {
@@ -228,7 +225,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun deleteUser(username: String) {
         val server = activeServer ?: return
-
         viewModelScope.launch {
             isLoading = true
             try {
@@ -246,7 +242,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun triggerExpire() {
         val server = activeServer ?: return
-
         viewModelScope.launch {
             isLoading = true
             try {
