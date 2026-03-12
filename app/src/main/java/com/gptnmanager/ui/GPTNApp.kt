@@ -1,5 +1,6 @@
 package com.gptnmanager.ui
 
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -228,7 +229,7 @@ private fun FancyToast(
             Spacer(Modifier.width(6.dp))
 
             IconButton(onClick = onClose) {
-                Icon(Icons.Rounded.Close, null)
+                Text("×")
             }
         }
     }
