@@ -44,7 +44,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         message = null
     }
 
-    fun setDarkMode(value: Boolean) {
+    fun updateDarkMode(value: Boolean) {
         isDarkMode = value
         storage.saveDarkMode(value)
     }
