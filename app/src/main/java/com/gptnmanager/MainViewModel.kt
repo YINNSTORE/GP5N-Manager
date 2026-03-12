@@ -9,6 +9,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.gptnmanager.data.ApiService
 import com.gptnmanager.data.AppMessage
+import com.gptnmanager.data.MessageType
 import com.gptnmanager.data.ServerConfig
 import com.gptnmanager.data.ServerStorage
 import com.gptnmanager.data.UserItem
@@ -69,6 +70,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             }
         }
         replaceServers(list)
+        message = AppMessage("Server berhasil disimpan", type = MessageType.SUCCESS)
         refreshAll()
     }
 
@@ -78,27 +80,36 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             list[0] = list[0].copy(isActive = true)
         }
         replaceServers(list)
-        if (list.isNotEmpty()) refreshAll() else {
+        if (list.isNotEmpty()) {
+            refreshAll()
+        } else {
             users = emptyList()
             systemInfo = emptyMap()
         }
-        message = AppMessage("Server dihapus")
+        message = AppMessage("Server dihapus", type = MessageType.SUCCESS)
     }
 
     fun setActiveServer(id: String) {
         replaceServers(servers.map { it.copy(isActive = it.id == id) })
+        message = AppMessage("Server aktif diganti", type = MessageType.INFO)
         refreshAll()
     }
 
     fun testServer(host: String, apiKey: String) {
-        val temp = ServerConfig(id = "tmp", name = "Temp", host = host, apiKey = apiKey, isActive = true)
+        val temp = ServerConfig(
+            id = "tmp",
+            name = "Temp",
+            host = host,
+            apiKey = apiKey,
+            isActive = true
+        )
         viewModelScope.launch {
             isLoading = true
             try {
                 api.getInfo(temp)
-                message = AppMessage("Koneksi sukses")
+                message = AppMessage("Koneksi sukses", type = MessageType.SUCCESS)
             } catch (t: Throwable) {
-                message = AppMessage("Koneksi gagal: ${t.message}", true)
+                message = AppMessage("Koneksi gagal: ${t.message}", true, MessageType.ERROR)
             } finally {
                 isLoading = false
             }
@@ -112,8 +123,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 systemInfo = api.getInfo(server)
                 users = api.getUsers(server)
+                if (systemInfo.isNotEmpty() || users.isNotEmpty()) {
+                    message = AppMessage("Data berhasil diperbarui", type = MessageType.INFO)
+                }
             } catch (t: Throwable) {
-                message = AppMessage("Gagal ambil data: ${t.message}", true)
+                message = AppMessage("Gagal ambil data: ${t.message}", true, MessageType.ERROR)
             } finally {
                 isLoading = false
             }
@@ -125,11 +139,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             isLoading = true
             try {
-                message = AppMessage(api.createUser(server, username, days = days))
+                message = AppMessage(api.createUser(server, username, days = days), type = MessageType.SUCCESS)
                 refreshAll()
             } catch (t: Throwable) {
                 isLoading = false
-                message = AppMessage("Create user gagal: ${t.message}", true)
+                message = AppMessage("Create user gagal: ${t.message}", true, MessageType.ERROR)
             }
         }
     }
@@ -139,11 +153,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             isLoading = true
             try {
-                message = AppMessage(api.createUser(server, username, minutes = minutes))
+                message = AppMessage(api.createUser(server, username, minutes = minutes), type = MessageType.SUCCESS)
                 refreshAll()
             } catch (t: Throwable) {
                 isLoading = false
-                message = AppMessage("Create trial gagal: ${t.message}", true)
+                message = AppMessage("Create trial gagal: ${t.message}", true, MessageType.ERROR)
             }
         }
     }
@@ -153,11 +167,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             isLoading = true
             try {
-                message = AppMessage(api.renewUser(server, username, days))
+                message = AppMessage(api.renewUser(server, username, days), type = MessageType.SUCCESS)
                 refreshAll()
             } catch (t: Throwable) {
                 isLoading = false
-                message = AppMessage("Renew gagal: ${t.message}", true)
+                message = AppMessage("Renew gagal: ${t.message}", true, MessageType.ERROR)
             }
         }
     }
@@ -167,11 +181,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             isLoading = true
             try {
-                message = AppMessage(api.deleteUser(server, username))
+                message = AppMessage(api.deleteUser(server, username), type = MessageType.SUCCESS)
                 refreshAll()
             } catch (t: Throwable) {
                 isLoading = false
-                message = AppMessage("Delete gagal: ${t.message}", true)
+                message = AppMessage("Delete gagal: ${t.message}", true, MessageType.ERROR)
             }
         }
     }
@@ -181,11 +195,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             isLoading = true
             try {
-                message = AppMessage(api.triggerExpire(server))
+                message = AppMessage(api.triggerExpire(server), type = MessageType.INFO)
                 refreshAll()
             } catch (t: Throwable) {
                 isLoading = false
-                message = AppMessage("Trigger expire gagal: ${t.message}", true)
+                message = AppMessage("Trigger expire gagal: ${t.message}", true, MessageType.ERROR)
             }
         }
     }
