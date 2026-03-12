@@ -105,7 +105,7 @@ fun GPTNApp(viewModel: MainViewModel) {
         val msg = viewModel.message ?: return@LaunchedEffect
         toastMessage = msg
         viewModel.dismissMessage()
-        delay(2800)
+        delay(2500)
         toastMessage = null
     }
 
@@ -156,7 +156,7 @@ fun GPTNApp(viewModel: MainViewModel) {
                         .fillMaxWidth()
                         .statusBarsPadding()
                         .padding(horizontal = 16.dp, vertical = 8.dp),
-                    contentAlignment = Alignment.TopCenter
+                    contentAlignment = Alignment.TopEnd
                 ) {
                     AnimatedVisibility(
                         visible = toastMessage != null,
@@ -181,47 +181,54 @@ private fun FancyToast(
     message: AppMessage,
     onClose: () -> Unit,
 ) {
-    val (accent, icon, title) = when (message.type) {
-        MessageType.SUCCESS -> Triple(SuccessColor, Icons.Rounded.CheckCircle, "Success")
-        MessageType.ERROR -> Triple(ErrorColor, Icons.Rounded.Error, "Error")
-        MessageType.INFO -> Triple(InfoColor, Icons.Rounded.Info, "Info")
-        MessageType.WARNING -> Triple(WarningColor, Icons.Rounded.Warning, "Warning")
+
+    val (color, icon) = when (message.type) {
+        MessageType.SUCCESS -> Pair(SuccessColor, Icons.Rounded.CheckCircle)
+        MessageType.ERROR -> Pair(ErrorColor, Icons.Rounded.Error)
+        MessageType.INFO -> Pair(InfoColor, Icons.Rounded.Info)
+        MessageType.WARNING -> Pair(WarningColor, Icons.Rounded.Warning)
     }
 
     Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 80.dp), // bikin posisi kanan
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+        elevation = CardDefaults.cardElevation(10.dp)
     ) {
+
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .padding(14.dp)
+                .fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically
         ) {
+
             Box(
                 modifier = Modifier
-                    .width(6.dp)
-                    .height(72.dp)
-                    .background(accent)
-            )
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically
+                    .size(34.dp)
+                    .background(color.copy(alpha = 0.15f), CircleShape),
+                contentAlignment = Alignment.Center
             ) {
-                Icon(icon, contentDescription = null, tint = accent)
-                Spacer(Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(title, fontWeight = FontWeight.Bold)
-                    Spacer(Modifier.height(2.dp))
-                    Text(message.text, maxLines = 3, overflow = TextOverflow.Ellipsis)
-                }
-                TextButton(onClick = onClose) {
-                    Text("Tutup")
-                }
+                Icon(icon, null, tint = color)
+            }
+
+            Spacer(Modifier.width(12.dp))
+
+            Text(
+                text = message.text,
+                modifier = Modifier.weight(1f),
+                maxLines = 3,
+                overflow = TextOverflow.Ellipsis
+            )
+
+            Spacer(Modifier.width(6.dp))
+
+            IconButton(onClick = onClose) {
+                Icon(Icons.Rounded.Close, null)
             }
         }
     }
