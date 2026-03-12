@@ -1,10 +1,16 @@
 package com.gptnmanager.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -14,29 +20,34 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Dns
+import androidx.compose.material.icons.rounded.Error
 import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.People
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Settings
+import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilledIconButton
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -47,8 +58,6 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -63,12 +72,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.gptnmanager.MainViewModel
+import com.gptnmanager.data.AppMessage
+import com.gptnmanager.data.MessageType
 import com.gptnmanager.data.ServerConfig
 import com.gptnmanager.data.UserItem
+import com.gptnmanager.ui.theme.ErrorColor
+import com.gptnmanager.ui.theme.InfoColor
+import com.gptnmanager.ui.theme.SuccessColor
+import com.gptnmanager.ui.theme.WarningColor
+import kotlinx.coroutines.delay
 
 private enum class TabItem(val label: String) {
     Dashboard("Dashboard"), Users("Users"), Settings("Settings")
@@ -77,17 +94,18 @@ private enum class TabItem(val label: String) {
 @Composable
 fun GPTNApp(viewModel: MainViewModel) {
     var currentTab by rememberSaveable { mutableStateOf(TabItem.Dashboard) }
-    val snackbarHostState = remember { SnackbarHostState() }
+    var toastMessage by remember { mutableStateOf<AppMessage?>(null) }
 
     LaunchedEffect(viewModel.message) {
         val msg = viewModel.message ?: return@LaunchedEffect
-        snackbarHostState.showSnackbar(msg.text)
+        toastMessage = msg
         viewModel.dismissMessage()
+        delay(2800)
+        toastMessage = null
     }
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Scaffold(
-            snackbarHost = { SnackbarHost(snackbarHostState) },
             bottomBar = {
                 NavigationBar(windowInsets = WindowInsets.navigationBars) {
                     listOf(TabItem.Dashboard, TabItem.Users, TabItem.Settings).forEach { tab ->
@@ -116,6 +134,7 @@ fun GPTNApp(viewModel: MainViewModel) {
                     TabItem.Users -> UsersScreen(viewModel)
                     TabItem.Settings -> SettingsScreen(viewModel)
                 }
+
                 if (viewModel.isLoading) {
                     Box(
                         modifier = Modifier
@@ -125,6 +144,78 @@ fun GPTNApp(viewModel: MainViewModel) {
                     ) {
                         CircularProgressIndicator()
                     }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 8.dp),
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    AnimatedVisibility(
+                        visible = toastMessage != null,
+                        enter = slideInVertically(initialOffsetY = { -it }) + fadeIn(),
+                        exit = slideOutVertically(targetOffsetY = { -it }) + fadeOut(),
+                    ) {
+                        toastMessage?.let {
+                            FancyToast(
+                                message = it,
+                                onClose = { toastMessage = null }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun FancyToast(
+    message: AppMessage,
+    onClose: () -> Unit,
+) {
+    val (accent, icon, title) = when (message.type) {
+        MessageType.SUCCESS -> Triple(SuccessColor, Icons.Rounded.CheckCircle, "Success")
+        MessageType.ERROR -> Triple(ErrorColor, Icons.Rounded.Error, "Error")
+        MessageType.INFO -> Triple(InfoColor, Icons.Rounded.Info, "Info")
+        MessageType.WARNING -> Triple(WarningColor, Icons.Rounded.Warning, "Warning")
+    }
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(18.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surface
+        ),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(
+                modifier = Modifier
+                    .width(6.dp)
+                    .height(72.dp)
+                    .background(accent)
+            )
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 14.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(icon, contentDescription = null, tint = accent)
+                Spacer(Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(title, fontWeight = FontWeight.Bold)
+                    Spacer(Modifier.height(2.dp))
+                    Text(message.text, maxLines = 3, overflow = TextOverflow.Ellipsis)
+                }
+                TextButton(onClick = onClose) {
+                    Text("Tutup")
                 }
             }
         }
@@ -174,7 +265,7 @@ private fun DashboardScreen(viewModel: MainViewModel) {
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+        contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
         item {
@@ -312,7 +403,7 @@ private fun UsersScreen(viewModel: MainViewModel) {
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+        contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
@@ -363,7 +454,7 @@ private fun UsersScreen(viewModel: MainViewModel) {
 private fun SettingsScreen(viewModel: MainViewModel) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp),
+        contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         item {
@@ -444,7 +535,7 @@ private fun ServerCard(server: ServerConfig, totalServer: Int, onSwitch: () -> U
 }
 
 @Composable
-private fun StatCard(modifier: Modifier, title: String, value: String, icon: androidx.compose.ui.graphics.vector.ImageVector) {
+private fun StatCard(modifier: Modifier, title: String, value: String, icon: ImageVector) {
     Card(modifier = modifier, shape = RoundedCornerShape(24.dp), colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)) {
         Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             Icon(icon, null)
