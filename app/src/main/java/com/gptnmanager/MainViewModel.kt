@@ -44,6 +44,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var pingMs by mutableLongStateOf(-1L)
         private set
 
+    val pingHistory = mutableStateListOf<Long>()
+
     val activeServer: ServerConfig?
         get() = servers.firstOrNull { it.isActive } ?: servers.firstOrNull()
 
@@ -111,6 +113,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             users = emptyList()
             systemInfo = emptyMap()
             pingMs = -1L
+            pingHistory.clear()
             stopPingLoop()
         }
 
@@ -119,6 +122,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setActiveServer(id: String) {
         replaceServers(servers.map { it.copy(isActive = it.id == id) })
+        pingHistory.clear()
         message = AppMessage("Server aktif diganti", type = MessageType.INFO)
         refreshAll(showMessage = false)
         startPingLoop()
@@ -138,10 +142,11 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val started = System.currentTimeMillis()
                 api.getInfo(temp)
-                pingMs = System.currentTimeMillis() - started
+                val latestPing = System.currentTimeMillis() - started
+                setPing(latestPing)
                 message = AppMessage("Koneksi sukses", type = MessageType.SUCCESS)
             } catch (t: Throwable) {
-                pingMs = -1L
+                setPing(-1L)
                 message = AppMessage("Koneksi gagal: ${t.message}", true, MessageType.ERROR)
             } finally {
                 isLoading = false
@@ -157,14 +162,15 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             try {
                 val started = System.currentTimeMillis()
                 systemInfo = api.getInfo(server)
-                pingMs = System.currentTimeMillis() - started
+                val latestPing = System.currentTimeMillis() - started
+                setPing(latestPing)
                 users = api.getUsers(server)
 
                 if (showMessage) {
                     message = AppMessage("Data berhasil diperbarui", type = MessageType.INFO)
                 }
             } catch (t: Throwable) {
-                pingMs = -1L
+                setPing(-1L)
                 message = AppMessage("Gagal ambil data: ${t.message}", true, MessageType.ERROR)
             } finally {
                 isLoading = false
@@ -268,15 +274,25 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     try {
                         val started = System.currentTimeMillis()
                         api.getInfo(server)
-                        pingMs = System.currentTimeMillis() - started
+                        val latestPing = System.currentTimeMillis() - started
+                        setPing(latestPing)
                     } catch (_: Throwable) {
-                        pingMs = -1L
+                        setPing(-1L)
                     }
                 } else {
-                    pingMs = -1L
+                    setPing(-1L)
                 }
-                delay(5000)
+                delay(1500)
             }
+        }
+    }
+
+    private fun setPing(value: Long) {
+        pingMs = value
+        val normalized = if (value < 0) 999L else value.coerceAtMost(999L)
+        pingHistory.add(normalized)
+        if (pingHistory.size > 24) {
+            pingHistory.removeAt(0)
         }
     }
 
