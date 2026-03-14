@@ -756,7 +756,11 @@ private fun PingStatusCard(
         shape = RoundedCornerShape(24.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer)
     ) {
-        Column(modifier = Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     modifier = Modifier
@@ -764,7 +768,9 @@ private fun PingStatusCard(
                         .shadow(12.dp, CircleShape, spotColor = pingColor, ambientColor = pingColor)
                         .background(pingColor, CircleShape)
                 )
+
                 Spacer(Modifier.width(8.dp))
+
                 Text("Status")
             }
 
@@ -782,7 +788,7 @@ private fun PingStatusCard(
                     shadow = Shadow(
                         color = pingColor.copy(alpha = 0.95f),
                         offset = Offset.Zero,
-                        blurRadius = 16f
+                        blurRadius = 18f
                     )
                 )
             )
@@ -792,7 +798,7 @@ private fun PingStatusCard(
                 lineColor = pingColor,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(42.dp)
+                    .height(90.dp)
             )
         }
     }
@@ -810,17 +816,18 @@ private fun PingMiniChart(
     }
 
     Canvas(modifier = modifier) {
-        val maxValue = values.maxOrNull()?.toFloat()?.coerceAtLeast(1f) ?: 1f
-        val minValue = values.minOrNull()?.toFloat() ?: 0f
-        val range = (maxValue - minValue).coerceAtLeast(1f)
-        val stepX = size.width / (values.size - 1).coerceAtLeast(1)
 
+        val maxPing = 999f
+        val stepX = size.width / (values.size - 1)
+        
         val path = Path()
 
         values.forEachIndexed { index, value ->
-            val x = stepX * index
-            val normalized = (value.toFloat() - minValue) / range
-            val y = size.height - (normalized * size.height)
+
+            val x = index * stepX
+            val normalized = (value.coerceAtMost(999).toFloat() / maxPing)
+
+            val y = normalized * size.height
 
             if (index == 0) {
                 path.moveTo(x, y)
@@ -832,7 +839,9 @@ private fun PingMiniChart(
         drawPath(
             path = path,
             color = lineColor,
-            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 4f)
+            style = androidx.compose.ui.graphics.drawscope.Stroke(
+                width = 6f
+            )
         )
     }
 }
