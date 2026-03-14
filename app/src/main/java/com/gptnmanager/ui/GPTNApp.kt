@@ -5,6 +5,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -83,6 +84,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.TextStyle
@@ -357,7 +359,8 @@ private fun DashboardScreen(viewModel: MainViewModel) {
                         )
                         PingStatusCard(
                             modifier = Modifier.weight(1f),
-                            pingMs = viewModel.pingMs
+                            pingMs = viewModel.pingMs,
+                            history = viewModel.pingHistory
                         )
                     }
                 }
@@ -734,7 +737,11 @@ private fun StatCard(modifier: Modifier, title: String, value: String, icon: Ima
 }
 
 @Composable
-private fun PingStatusCard(modifier: Modifier, pingMs: Long) {
+private fun PingStatusCard(
+    modifier: Modifier,
+    pingMs: Long,
+    history: List<Long>
+) {
     val pingColor = when {
         pingMs < 0 -> ErrorColor
         pingMs in 1..389 -> SuccessColor
@@ -779,7 +786,54 @@ private fun PingStatusCard(modifier: Modifier, pingMs: Long) {
                     )
                 )
             )
+
+            PingMiniChart(
+                values = history,
+                lineColor = pingColor,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(42.dp)
+            )
         }
+    }
+}
+
+@Composable
+private fun PingMiniChart(
+    values: List<Long>,
+    lineColor: Color,
+    modifier: Modifier = Modifier
+) {
+    if (values.size < 2) {
+        Box(modifier = modifier)
+        return
+    }
+
+    Canvas(modifier = modifier) {
+        val maxValue = values.maxOrNull()?.toFloat()?.coerceAtLeast(1f) ?: 1f
+        val minValue = values.minOrNull()?.toFloat() ?: 0f
+        val range = (maxValue - minValue).coerceAtLeast(1f)
+        val stepX = size.width / (values.size - 1).coerceAtLeast(1)
+
+        val path = Path()
+
+        values.forEachIndexed { index, value ->
+            val x = stepX * index
+            val normalized = (value.toFloat() - minValue) / range
+            val y = size.height - (normalized * size.height)
+
+            if (index == 0) {
+                path.moveTo(x, y)
+            } else {
+                path.lineTo(x, y)
+            }
+        }
+
+        drawPath(
+            path = path,
+            color = lineColor,
+            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 4f)
+        )
     }
 }
 
